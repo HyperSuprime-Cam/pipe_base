@@ -20,6 +20,7 @@
 # see <http://www.lsstcorp.org/LegalNotices/>.
 #
 import argparse
+import collections
 import itertools
 import os
 import re
@@ -604,9 +605,11 @@ class IdValueAction(argparse.Action):
         """
         if namespace.config is None:
             return
-        idDict = dict()
+        idDict = collections.OrderedDict()
         for nameValue in values:
             name, sep, valueStr = nameValue.partition("=")
+            if name in idDict:
+                parser.error("%s appears multiple times in one ID argument: %s" % (name, option_string))
             idDict[name] = []
             for v in valueStr.split("^"):
                 mat = re.search(r"^(\d+)\.\.(\d+)(?::(\d+))?$", v)
@@ -621,7 +624,8 @@ class IdValueAction(argparse.Action):
 
         keyList = idDict.keys()
         iterList = [idDict[key] for key in keyList]
-        idDictList = [dict(zip(keyList, valList)) for valList in itertools.product(*iterList)]
+        idDictList = [collections.OrderedDict(zip(keyList, valList))
+            for valList in itertools.product(*iterList)]
 
         argName = option_string.lstrip("-")
         ident = getattr(namespace, argName)
