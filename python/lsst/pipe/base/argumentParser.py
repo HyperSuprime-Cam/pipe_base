@@ -30,6 +30,7 @@ import getpass
 import shutil
 
 import eups
+import lsst.pex.config as pexConfig
 import lsst.pex.logging as pexLog
 import lsst.daf.persistence as dafPersist
 
@@ -85,7 +86,7 @@ class DataIdContainer(object):
             raise RuntimeError("Must call setDatasetType first")
         try:
             idKeyTypeDict = butler.getKeys(datasetType=self.datasetType, level=self.level)
-        except KeyError as e:
+        except KeyError:
             raise KeyError("Cannot get keys for datasetType %s at level %s" % (self.datasetType, self.level))
         
         for dataDict in self.idList:
@@ -247,8 +248,8 @@ simultaneously, and relative to the same root.
         self.add_argument("--doraise", action="store_true",
             help="raise an exception on error (else log a message and continue)?")
         self.add_argument("--logdest", help="logging destination")
-        self.add_argument("--show", nargs="*", choices="config data exit".split(), default=(),
-            help="display final configuration and/or data IDs to stdout? If exit, then don't process data.")
+        self.add_argument("--show", nargs="*", choices="config data tasks run".split(), default=(),
+            help="display the specified information to stdout and quit (unless run is specified).")
         self.add_argument("-j", "--processes", type=int, default=1, help="Number of processes to use")
         self.add_argument("--clobber-output", action="store_true", dest="clobberOutput", default=False,
                           help=("remove and re-create the output directory if it already exists "
@@ -380,6 +381,9 @@ simultaneously, and relative to the same root.
         namespace.log.info("calib=%s"  % (namespace.calib,))
         namespace.log.info("output=%s" % (namespace.output,))
         
+        if "tasks" in namespace.show:
+            showTaskHierarchy(config=namespace.config)
+        
         if "config" in namespace.show:
             namespace.config.saveToStream(sys.stdout, "config")
 
@@ -398,7 +402,7 @@ simultaneously, and relative to the same root.
                 for dataRef in getattr(namespace, dataIdName).refList:
                     print dataIdName + " dataRef.dataId =", dataRef.dataId
 
-        if "exit" in namespace.show:
+        if namespace.show and "run" not in namespace.show:
             sys.exit(0)
 
         if namespace.debug:
@@ -546,6 +550,40 @@ simultaneously, and relative to the same root.
             if not arg.strip():
                 continue
             yield arg
+
+def getTaskDict(config, taskDict=None, baseName=""):
+    """Get a dictionary of task info for all subtasks in a config
+    
+    @param[in] config: configuration to process, an instance of lsst.pex.config.Config
+    @return taskDict: a dict of config field name: task name
+    """
+    if taskDict is None:
+        taskDict = dict()
+    for fieldName, field in config.iteritems():
+        if hasattr(field, "value") and hasattr(field, "target"):
+            subConfig = field.value
+            if isinstance(subConfig, pexConfig.Config):
+                subBaseName = "%s.%s" % (baseName, fieldName) if baseName else fieldName
+                try:
+                    taskName = "%s.%s" % (field.target.__module__, field.target.__name__)
+                except Exception:
+                    taskName = repr(field.target)
+                taskDict[subBaseName] = taskName
+                getTaskDict(config=subConfig, taskDict=taskDict, baseName=subBaseName)
+    return taskDict
+    
+def showTaskHierarchy(config):
+    """Print task hierarchy to stdout
+    
+    @param[in] config: configuration to process, an instance of lsst.pex.config.Config
+    """
+    print "Subtasks:"
+    taskDict = getTaskDict(config=config)
+        
+    fieldNameList = sorted(taskDict.keys())
+    for fieldName in fieldNameList:
+        taskName = taskDict[fieldName]
+        print "%s: %s" % (fieldName, taskName)
 
 class ConfigValueAction(argparse.Action):
     """argparse action callback to override config parameters using name=value pairs from the command line
