@@ -439,6 +439,7 @@ simultaneously, and relative to the same root.
         This allows for hacking the directories, e.g., to include a "rerun".
         Modifications are made to the 'namespace' object in-place.
         """
+        mapperClass = dafPersist.Butler.getMapperClass(namespace.rawInput)
         namespace.calib = _fixPath(DEFAULT_CALIB_NAME,  namespace.rawCalib)
         if namespace.rawOutput:
             namespace.output = _fixPath(DEFAULT_OUTPUT_NAME, namespace.rawOutput)
