@@ -62,6 +62,10 @@ class TaskError(Exception):
     """
     pass
 
+def _unpickler(cls, args, kwargs):
+    """Unpickle an object using its constructor"""
+    return cls(*args, **kwargs)
+
 class Task(object):
     """A data processing task
     
@@ -87,6 +91,19 @@ class Task(object):
     
     Pipeline tasks intended to be run as top-level tasks should be subclasses of CmdLineTask, not Task.
     """
+#    def __new__(cls, *args, **kwargs):
+#        """Constructor
+#
+#        Saves arguments for pickling.
+#        """
+#        self = super(Task, cls).__new__(cls, *args, **kwargs)
+#        self._pickleArgs = (cls, args, kwargs)
+#        return self
+
+    def __reduce__(self):
+        """Pickler"""
+        return self.__class__, (self.config, self._name, self._parentTask, None)
+
     def __init__(self, config=None, name=None, parentTask=None, log=None):
         """Create a Task
         
@@ -104,6 +121,7 @@ class Task(object):
         @raise RuntimeError if parentTask is not None and name is None.
         """
         self.metadata = dafBase.PropertyList()
+        self._parentTask = parentTask
 
         if parentTask != None:
             if name is None:
