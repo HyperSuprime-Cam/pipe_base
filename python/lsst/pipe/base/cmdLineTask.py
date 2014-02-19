@@ -348,7 +348,7 @@ class CmdLineTask(Task):
 
     def writeSchemas(self, butler, clobber=False):
         """Write any catalogs returned by getSchemaCatalogs()."""
-        for dataset, catalog in self.getAllSchemaCatalogs(butler).iteritems():
+        for dataset, catalog in self.getAllSchemaCatalogs().iteritems():
             schemaDataset = dataset + "_schema"
             if clobber:
                 butler.put(catalog, schemaDataset, doBackup=True)
