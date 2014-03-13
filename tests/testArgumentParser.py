@@ -274,25 +274,6 @@ class ArgumentParserTestCase(unittest.TestCase):
         )
         pexLog.Trace("something", 4, "You should see this message")
         pexLog.Trace("something", 6, "You should not see this message")
-    
-    def testPipeVars(self):
-        """Test handling of $PIPE_x_ROOT environment variables, where x is INPUT, CALIB or OUTPUT
-        """
-        os.environ["PIPE_INPUT_ROOT"] = DataPath
-        namespace = self.ap.parse_args(
-            config = self.config,
-            args = ["."],
-        )
-        self.assertEqual(namespace.input, os.path.abspath(DataPath))
-        self.assertEqual(namespace.calib, None)
-
-        os.environ["PIPE_CALIB_ROOT"] = DataPath
-        namespace = self.ap.parse_args(
-            config = self.config,
-            args = ["."],
-        )
-        self.assertEqual(namespace.input, os.path.abspath(DataPath))
-        self.assertEqual(namespace.calib, os.path.abspath(DataPath))
 
 def suite():
     utilsTests.init()
