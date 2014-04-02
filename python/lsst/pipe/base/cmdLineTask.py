@@ -321,7 +321,16 @@ class CmdLineTask(Task):
         """Write the versions setup when this data was processed.  If one already exists, clobber
         only if asked to do so.
         """
-        butler.put("dummy_string", "eups_versions", doBackup=clobber)
+        if clobber:
+            butler.put("dummy_string", "eups_versions", doBackup=True)
+        elif butler.datasetExists("eups_versions"):
+            # NOTE: we don't check to see if it's the same setup
+            raise TaskError(
+                "Eups versions file already exists on disk for this rerun. "
+                "Please run with --clobber-config to override"
+                )
+        else:
+            butler.put("dummy_string", "eups_versions")
 
     def writeSchemas(self, butler, clobber=False):
         """Write any catalogs returned by getSchemaCatalogs()."""
