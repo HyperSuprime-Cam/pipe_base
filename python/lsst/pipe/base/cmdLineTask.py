@@ -166,10 +166,12 @@ class TaskRunner(object):
         task = self.TaskClass(config=self.config, log=self.log)
         if self.doRaise:
             task.writeConfig(parsedCmd.butler, clobber=self.clobberConfig)
+            task.writeEupsVersions(parsedCmd.butler, clobber=self.clobberConfig)
             task.writeSchemas(parsedCmd.butler, clobber=self.clobberConfig)
         else:
             try:
                 task.writeConfig(parsedCmd.butler, clobber=self.clobberConfig)
+                task.writeEupsVersions(parsedCmd.butler, clobber=self.clobberConfig)
                 task.writeSchemas(parsedCmd.butler, clobber=self.clobberConfig)
             except Exception, e:
                 task.log.fatal("Failed in task initialization: %s" % e)
@@ -314,6 +316,12 @@ class CmdLineTask(Task):
                     )
         else:
             butler.put(self.config, configName)
+
+    def writeEupsVersions(self, butler, clobber=False):
+        """Write the versions setup when this data was processed.  If one already exists, clobber
+        only if asked to do so.
+        """
+        butler.put("dummy_string", "eups_versions", doBackup=clobber)
 
     def writeSchemas(self, butler, clobber=False):
         """Write any catalogs returned by getSchemaCatalogs()."""
