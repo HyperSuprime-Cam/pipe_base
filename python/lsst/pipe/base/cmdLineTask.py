@@ -179,10 +179,12 @@ class TaskRunner(object):
         task = self.makeTask(parsedCmd=parsedCmd)
         if self.doRaise:
             task.writeConfig(parsedCmd.butler, clobber=self.clobberConfig)
+            task.writeEupsVersions(parsedCmd.butler, clobber=self.clobberConfig)
             task.writeSchemas(parsedCmd.butler, clobber=self.clobberConfig)
         else:
             try:
                 task.writeConfig(parsedCmd.butler, clobber=self.clobberConfig)
+                task.writeEupsVersions(parsedCmd.butler, clobber=self.clobberConfig)
                 task.writeSchemas(parsedCmd.butler, clobber=self.clobberConfig)
             except Exception, e:
                 task.log.fatal("Failed in task initialization: %s" % e)
@@ -345,6 +347,21 @@ class CmdLineTask(Task):
                     )
         else:
             butler.put(self.config, configName)
+
+    def writeEupsVersions(self, butler, clobber=False):
+        """Write the versions setup when this data was processed.  If one already exists, clobber
+        only if asked to do so.
+        """
+        if clobber:
+            butler.put("dummy_string", "eups_versions", doBackup=True)
+        elif butler.datasetExists("eups_versions"):
+            # NOTE: we don't check to see if it's the same setup
+            raise TaskError(
+                "Eups versions file already exists on disk for this rerun. "
+                "Please run with --clobber-config to override"
+                )
+        else:
+            butler.put("dummy_string", "eups_versions")
 
     def writeSchemas(self, butler, clobber=False):
         """Write any catalogs returned by getSchemaCatalogs()."""
