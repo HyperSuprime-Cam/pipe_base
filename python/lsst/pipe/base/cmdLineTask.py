@@ -19,8 +19,9 @@
 # the GNU General Public License along with this program.  If not, 
 # see <http://www.lsstcorp.org/LegalNotices/>.
 #
-import sys
+import sys, os
 import traceback
+import commands
 
 import lsst.afw.table as afwTable
 
@@ -355,11 +356,19 @@ class CmdLineTask(Task):
         if clobber:
             butler.put("dummy_string", "eups_versions", doBackup=True)
         elif butler.datasetExists("eups_versions"):
-            # NOTE: we don't check to see if it's the same setup
-            raise TaskError(
-                "Eups versions file already exists on disk for this rerun. "
-                "Please run with --clobber-config to override"
+            # we have no 'eups' object to load the data into for a comparison,
+            # so we'll write a tempororary product and 'diff' compare the files.
+            butler.put("dummy_string", "eups_versions_tmp")
+            f1 = butler.get("eups_versions_filename", immediate=True)[0]
+            f2 = butler.get("eups_versions_tmp_filename", immediate=True)[0]
+            _status, diff = commands.getstatusoutput("diff "+f1+" "+f2)
+            if len(diff.strip()) > 0:
+                raise TaskError(
+                    "A different Eups versions file already exists on disk for this rerun." +
+                    "The diff is: \n" + diff + "\n" +
+                    "Please run with --clobber-config to override"
                 )
+            os.remove(butler.get("eups_versions_tmp_filename", immediate=True)[0])
         else:
             butler.put("dummy_string", "eups_versions")
 
