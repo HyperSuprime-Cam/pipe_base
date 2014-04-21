@@ -353,6 +353,11 @@ class CmdLineTask(Task):
         """Write the versions setup when this data was processed.  If one already exists, clobber
         only if asked to do so.
         """
+
+        # if the mapper doesn't support eups versions, then we can't do this.
+        if not hasattr(butler.mapper, "map_eups_versions"):
+            return
+
         if clobber:
             butler.put("dummy_string", "eups_versions", doBackup=True)
         elif butler.datasetExists("eups_versions"):
