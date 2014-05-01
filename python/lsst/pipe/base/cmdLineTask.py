@@ -28,6 +28,7 @@ import lsst.afw.table as afwTable
 from .task import Task, TaskError
 from .struct import Struct
 from .argumentParser import ArgumentParser
+from lsst.daf.persistence import EupsVersions
 
 __all__ = ["CmdLineTask", "TaskRunner", "ButlerInitializedTaskRunner"]
 
@@ -353,31 +354,26 @@ class CmdLineTask(Task):
         """Write the versions setup when this data was processed.  If one already exists, clobber
         only if asked to do so.
         """
-
         # if the mapper doesn't support eups versions, then we can't do this.
         if not hasattr(butler.mapper, "map_eups_versions"):
             return
 
+        eupsName = self._getEupsVersionsName()
+        if eupsName is None:
+            return
+        eupsVersions = EupsVersions()
         if clobber:
-            butler.put("dummy_string", "eups_versions", doBackup=True)
-        elif butler.datasetExists("eups_versions"):
-            # we have no 'eups' object to load the data into for a comparison,
-            # so we'll write a tempororary product and 'diff' compare the files.
-            butler.put("dummy_string", "eups_versions_tmp")
-            with open(butler.get("eups_versions_filename", immediate=True)[0]) as fp1:
-                eups1 = fp1.readlines()
-            with open(butler.get("eups_versions_tmp_filename", immediate=True)[0]) as fp2:
-                eups2 = fp2.readlines()
-            diff = "\n".join(list(difflib.unified_diff(eups1, eups2, n=0, lineterm='')))
-            if len(diff.strip()) > 0:
+            butler.put(eupsVersions, eupsName, doBackup=True)
+        elif butler.datasetExists(eupsName):
+            oldEupsVersions = butler.get(eupsName, immediate=True)
+            diff = eupsVersions.diff(oldEupsVersions)
+            if len(diff) > 0:
                 raise TaskError(
                     "\n\nYour Eups versions have changed.  The difference is: \n" + diff + "\n" +
                     "Please run with --clobber-config to override\n"
                 )
-            else:
-                os.remove(butler.get("eups_versions_tmp_filename", immediate=True)[0])
         else:
-            butler.put("dummy_string", "eups_versions")
+            butler.put(eupsVersions, eupsName)
 
     def writeSchemas(self, butler, clobber=False):
         """Write any catalogs returned by getSchemaCatalogs()."""
@@ -409,6 +405,11 @@ class CmdLineTask(Task):
         """Return the name of the config dataset, or None if config is not persisted
         """
         return self._DefaultName + "_config"
+
+    def _getEupsVersionsName(self):
+        """Return the name of the eups versions dataset, or None if eups is not persisted
+        """
+        return "eups_versions"
 
     def _getMetadataName(self):
         """Return the name of the metadata dataset, or None if metadata is not persisted
