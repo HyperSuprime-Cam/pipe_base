@@ -207,8 +207,10 @@ class ArgumentParserTestCase(unittest.TestCase):
             self.ap.parse_args(self.config, [DataPath, "--show", "config=*strItem*", "run"])
         stdout = out[0]
         answer = stdout.rstrip().split('\n')
-        self.assertEqual(len(answer), 1)         # only 1 config item matches
-        self.assertTrue("strDefault" in answer[0])
+
+        self.assertEqual(len(answer), 1*2)         # only 1 config item matches (2 because of doc string)
+        self.assertTrue("sample str field" in answer[0]) # doc string
+        self.assertTrue("strDefault" in answer[1])
 
         self.assertRaises(SystemExit, self.ap.parse_args,
             config = self.config,
