@@ -440,11 +440,13 @@ simultaneously, and relative to the same root.
         """
         mapperClass = dafPersist.Butler.getMapperClass(namespace.rawInput)
         namespace.calib = _fixPath(DEFAULT_CALIB_NAME,  namespace.rawCalib)
+        guessedRerun = False            # did we guess the rerun name?
         if namespace.rawOutput:
             namespace.output = _fixPath(DEFAULT_OUTPUT_NAME, namespace.rawOutput)
         else:
             namespace.output = None
             if namespace.rawRerun is None:
+                guessedRerun = True
                 namespace.rawRerun = getpass.getuser()
 
         if namespace.rawRerun:
@@ -459,8 +461,13 @@ simultaneously, and relative to the same root.
             elif len(namespace.rerun) == 1:
                 if os.path.exists(namespace.rerun[0]):
                     namespace.output = namespace.rerun[0]
-                    namespace.input = os.path.realpath(os.path.join(namespace.rerun[0], "_parent"))
-                    modifiedInput = True
+
+                    guessedInput = os.path.realpath(os.path.join(namespace.rerun[0], "_parent"))
+                    if guessedRerun and not os.path.exists(guessedInput):
+                        pass            # refuse the guesses
+                    else:
+                        namespace.input = guessedInput
+                        modifiedInput = True
                 else:
                     namespace.output = namespace.rerun[0]
             else:
