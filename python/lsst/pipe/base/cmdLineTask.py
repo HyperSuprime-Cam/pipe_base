@@ -1,7 +1,7 @@
-# 
+#
 # LSST Data Management System
 # Copyright 2008-2013 LSST Corporation.
-# 
+#
 # This product includes software developed by the
 # LSST Project (http://www.lsst.org/).
 #
@@ -9,14 +9,14 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
-# You should have received a copy of the LSST License Statement and 
-# the GNU General Public License along with this program.  If not, 
+#
+# You should have received a copy of the LSST License Statement and
+# the GNU General Public License along with this program.  If not,
 # see <http://www.lsstcorp.org/LegalNotices/>.
 #
 import sys, os
@@ -68,10 +68,10 @@ def _runPool(pool, timeout, function, iterable):
 
 class TaskRunner(object):
     """Run a Task, using multiprocessing if requested.
-    
+
     Each command-line task must have this task runner or a subclass as its RunnerClass.
     See CmdLineTask.parseAndRun to see how a task runner is used.
-    
+
     You may use this task runner for your command line task if your task has a run method
     that takes exactly one argument: a butler data reference. Otherwise you must
     provide a task-specific subclass of this runner for your task's RunnerClass
@@ -96,7 +96,7 @@ class TaskRunner(object):
     TIMEOUT = 9999 # Default timeout (sec) for multiprocessing
     def __init__(self, TaskClass, parsedCmd, doReturnResults=False):
         """Construct a TaskRunner
-        
+
         Do not store parsedCmd, as this instance is pickled (if multiprocessing) and parsedCmd may contain
         non-picklable elements and it certainly contains more data than we need to send to each
         iteration of the task.
@@ -108,7 +108,7 @@ class TaskRunner(object):
             This is only intended for unit tests and similar use.
             It can easily exhaust memory (if the task returns enough data and you call it enough times)
             and it will fail when using multiprocessing if the returned data cannot be pickled.
-        
+
         @raise ImportError if multiprocessing requested (and the task supports it)
         but the multiprocessing library cannot be imported.
         """
@@ -168,31 +168,31 @@ class TaskRunner(object):
     @staticmethod
     def getTargetList(parsedCmd, **kwargs):
         """Return a list of (dataRef, kwargs) to be used as arguments for __call__.
-        
+
         @param parsedCmd the parsed command object returned by ArgumentParser.parse_args
         @param **kwargs any additional keyword arguments. In the default TaskRunner
         this is an empty dict, but having it simplifies overriding TaskRunner for tasks
         whose run method takes additional arguments (see case (1) below).
-        
+
         The default implementation of getTargetList and __call__ works for any task
         that has a run method that takes exactly one argument: a data reference.
         Otherwise you must provide a variant of TaskRunner that overrides getTargetList
         and possibly __call__. There are two cases:
-        
+
         (1) If your task has a run method that takes one data reference followed by additional arguments
         then you need only override getTargetList to return the additional arguments an argument dict:
 
         @staticmethod
         def getTargetList(parsedCmd):
             return TaskRunner.getTargetList(parsedCmd, calExpList=parsedCmd.calexp.idList)
-        
+
         which is equivalent to:
-        
+
         @staticmethod
         def getTargetList(parsedCmd):
             argDict = dict(calExpList=parsedCmd.calexp.idList)
             return [(dataId, argDict) for dataId in parsedCmd.id.idList]
-            
+
         (2) If your task does not meet condition (1) then you must override both getTargetList
         and __call__. You may do this however you see fit, so long as getTargetList returns
         a list, each of whose elements is sent to __call__, which runs your task.
@@ -267,11 +267,14 @@ class TaskRunner(object):
             try:
                 result = task.run(dataRef, **kwargs)
             except Exception, e:
-                task.log.fatal("Failed on dataId=%s: %s" % (dataRef.dataId, e))
+                if hasattr(dataRef, "dataId"):
+                    task.log.fatal("Failed on dataId=%s: %s" % (dataRef.dataId, e))
+                else:
+                    task.log.fatal("Failed with exception: %s" % e)
                 if not isinstance(e, TaskError):
                     traceback.print_exc(file=sys.stderr)
         task.writeMetadata(dataRef)
-        
+
         if self.doReturnResults:
             return Struct(
                 dataRef = dataRef,
@@ -299,11 +302,11 @@ class ButlerInitializedTaskRunner(TaskRunner):
 
 class CmdLineTask(Task):
     """A task that can be executed from the command line
-    
+
     Subclasses must specify the following attribute:
     * ConfigClass: configuration class for your task (an instance of pex_config Config)
     * _DefaultName: default name used for this task
-    
+
     Subclasses may also specify the following attribute:
     * RunnerClass: a task runner class. The default is TaskRunner, which works for any task
       with a run method that takes exactly one argument: a data reference. If your task does
