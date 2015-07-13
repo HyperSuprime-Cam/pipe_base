@@ -407,7 +407,10 @@ class CmdLineTask(Task):
             return
         eupsVersions = EupsVersions()
         if clobber:
-            butler.put(eupsVersions, eupsName, doBackup=doBackup)
+            try:
+                butler.put(eupsVersions, eupsName, doBackup=doBackup)
+            except IOError:
+                self.log.warn("Could not read and/or write EUPS version file; ignoring.")
         elif butler.datasetExists(eupsName):
             oldEupsVersions = butler.get(eupsName, immediate=True)
             diff = eupsVersions.diff(oldEupsVersions)
